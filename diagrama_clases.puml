@@ -1,0 +1,100 @@
+@startuml Cafeteria
+' Diagrama de clases - EA4 Proyecto integrador
+' Se puede ver pegando este codigo en https://www.planttext.com
+skinparam classAttributeIconSize 0
+hide empty members
+
+package modelo {
+  abstract class Producto {
+    - nombre : String
+    - precio : double
+    # Producto(nombre : String, precio : double)
+    + getNombre() : String
+    + getPrecio() : double
+    + {abstract} getTipo() : String
+    + describir() : String
+  }
+  class Bebida {
+    - caliente : boolean
+    + Bebida(nombre : String, precio : double, caliente : boolean)
+    + isCaliente() : boolean
+    + getTipo() : String
+    + describir() : String
+  }
+  class Comida {
+    - vegetariana : boolean
+    + Comida(nombre : String, precio : double, vegetariana : boolean)
+    + isVegetariana() : boolean
+    + getTipo() : String
+    + describir() : String
+  }
+}
+
+package descuento {
+  interface ReglaDescuento <<FunctionalInterface>> {
+    + calcularDescuento(total : double) : double
+  }
+  class ReglasCafeteria {
+    + {static} MONTO_MINIMO : double = 10.0
+    + {static} PORCENTAJE : double = 0.15
+    + {static} QUINCE_POR_CIENTO_SOBRE_10 : ReglaDescuento
+    + {static} SIN_DESCUENTO : ReglaDescuento
+  }
+  class CalculadoraDescuento {
+    - regla : ReglaDescuento
+    + CalculadoraDescuento(regla : ReglaDescuento)
+    + calcularDescuento(total : double) : double
+    + calcularTotalFinal(total : double) : double
+  }
+}
+
+package datos {
+  class ConexionBD {
+    - {static} DRIVER : String
+    - {static} URL : String
+    + cargarDriver() : void
+    + abrir() : Connection
+  }
+  class RepositorioProductos {
+    - conexionBD : ConexionBD
+    + RepositorioProductos(conexionBD : ConexionBD)
+    + prepararTabla() : void
+    + listarProductos() : List<Producto>
+  }
+}
+
+package vista {
+  class VentanaDescuento {
+    - calculadora : CalculadoraDescuento
+    - conexionBD : ConexionBD
+    - repositorio : RepositorioProductos
+    - campoMonto : JTextField
+    - botonCalcular : JButton
+    - areaResultado : JTextArea
+    + VentanaDescuento(calculadora, conexionBD, repositorio)
+    - armarVentana() : void
+    - probarConexion() : void
+    - calcular() : void
+  }
+}
+
+class Main {
+  + {static} main(args : String[]) : void
+}
+
+class JFrame
+
+Producto <|-- Bebida
+Producto <|-- Comida
+JFrame <|-- VentanaDescuento
+
+CalculadoraDescuento "1" --> "1" ReglaDescuento : usa >
+ReglasCafeteria ..> ReglaDescuento : define lambdas >
+RepositorioProductos "1" --> "1" ConexionBD : abre conexión >
+RepositorioProductos ..> Producto : crea >
+VentanaDescuento "1" --> "1" CalculadoraDescuento
+VentanaDescuento "1" --> "1" RepositorioProductos
+VentanaDescuento "1" --> "1" ConexionBD
+Main ..> VentanaDescuento : crea >
+Main ..> ReglasCafeteria : usa >
+@enduml

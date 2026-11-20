@@ -1,0 +1,391 @@
+﻿archivo,linea,codigo
+src/cafeteria/Main.java,1,package cafeteria;
+src/cafeteria/Main.java,2,
+src/cafeteria/Main.java,3,import cafeteria.datos.ConexionBD;
+src/cafeteria/Main.java,4,import cafeteria.datos.RepositorioProductos;
+src/cafeteria/Main.java,5,import cafeteria.descuento.CalculadoraDescuento;
+src/cafeteria/Main.java,6,import cafeteria.descuento.ReglasCafeteria;
+src/cafeteria/Main.java,7,import cafeteria.vista.VentanaDescuento;
+src/cafeteria/Main.java,8,
+src/cafeteria/Main.java,9,import javax.swing.SwingUtilities;
+src/cafeteria/Main.java,10,
+src/cafeteria/Main.java,11,/** Punto de entrada. Aquí se crean los objetos y se conectan entre sí. */
+src/cafeteria/Main.java,12,public class Main {
+src/cafeteria/Main.java,13,
+src/cafeteria/Main.java,14,    public static void main(String[] args) {
+src/cafeteria/Main.java,15,        SwingUtilities.invokeLater(() -> {
+src/cafeteria/Main.java,16,            CalculadoraDescuento calculadora =
+src/cafeteria/Main.java,17,                    new CalculadoraDescuento(ReglasCafeteria.QUINCE_POR_CIENTO_SOBRE_10);
+src/cafeteria/Main.java,18,            ConexionBD conexionBD = new ConexionBD();
+src/cafeteria/Main.java,19,            RepositorioProductos repositorio = new RepositorioProductos(conexionBD);
+src/cafeteria/Main.java,20,
+src/cafeteria/Main.java,21,            VentanaDescuento ventana =
+src/cafeteria/Main.java,22,"                    new VentanaDescuento(calculadora, conexionBD, repositorio);"
+src/cafeteria/Main.java,23,            ventana.setVisible(true);
+src/cafeteria/Main.java,24,        });
+src/cafeteria/Main.java,25,    }
+src/cafeteria/Main.java,26,}
+src/cafeteria/datos/ConexionBD.java,1,package cafeteria.datos;
+src/cafeteria/datos/ConexionBD.java,2,
+src/cafeteria/datos/ConexionBD.java,3,import java.sql.Connection;
+src/cafeteria/datos/ConexionBD.java,4,import java.sql.DriverManager;
+src/cafeteria/datos/ConexionBD.java,5,import java.sql.SQLException;
+src/cafeteria/datos/ConexionBD.java,6,
+src/cafeteria/datos/ConexionBD.java,7,/** Se encarga solo de abrir la conexión con la base de datos SQLite. */
+src/cafeteria/datos/ConexionBD.java,8,public class ConexionBD {
+src/cafeteria/datos/ConexionBD.java,9,
+src/cafeteria/datos/ConexionBD.java,10,"    private static final String DRIVER = ""org.sqlite.JDBC"";"
+src/cafeteria/datos/ConexionBD.java,11,"    private static final String URL = ""jdbc:sqlite:cafeteria.db"";"
+src/cafeteria/datos/ConexionBD.java,12,
+src/cafeteria/datos/ConexionBD.java,13,    /** Revisa que el driver de SQLite esté en el proyecto. */
+src/cafeteria/datos/ConexionBD.java,14,    public void cargarDriver() throws ClassNotFoundException {
+src/cafeteria/datos/ConexionBD.java,15,        Class.forName(DRIVER);
+src/cafeteria/datos/ConexionBD.java,16,    }
+src/cafeteria/datos/ConexionBD.java,17,
+src/cafeteria/datos/ConexionBD.java,18,    /** Abre una conexión nueva. Quien la use debe cerrarla. */
+src/cafeteria/datos/ConexionBD.java,19,    public Connection abrir() throws SQLException {
+src/cafeteria/datos/ConexionBD.java,20,        return DriverManager.getConnection(URL);
+src/cafeteria/datos/ConexionBD.java,21,    }
+src/cafeteria/datos/ConexionBD.java,22,}
+src/cafeteria/datos/RepositorioProductos.java,1,package cafeteria.datos;
+src/cafeteria/datos/RepositorioProductos.java,2,
+src/cafeteria/datos/RepositorioProductos.java,3,import cafeteria.modelo.Bebida;
+src/cafeteria/datos/RepositorioProductos.java,4,import cafeteria.modelo.Comida;
+src/cafeteria/datos/RepositorioProductos.java,5,import cafeteria.modelo.Producto;
+src/cafeteria/datos/RepositorioProductos.java,6,
+src/cafeteria/datos/RepositorioProductos.java,7,import java.sql.Connection;
+src/cafeteria/datos/RepositorioProductos.java,8,import java.sql.ResultSet;
+src/cafeteria/datos/RepositorioProductos.java,9,import java.sql.SQLException;
+src/cafeteria/datos/RepositorioProductos.java,10,import java.sql.Statement;
+src/cafeteria/datos/RepositorioProductos.java,11,import java.util.ArrayList;
+src/cafeteria/datos/RepositorioProductos.java,12,import java.util.List;
+src/cafeteria/datos/RepositorioProductos.java,13,
+src/cafeteria/datos/RepositorioProductos.java,14,/**
+src/cafeteria/datos/RepositorioProductos.java,15, * Guarda y consulta los productos en la base de datos.
+src/cafeteria/datos/RepositorioProductos.java,16, * Usa try-with-resources para que la conexión se cierre sola.
+src/cafeteria/datos/RepositorioProductos.java,17, */
+src/cafeteria/datos/RepositorioProductos.java,18,public class RepositorioProductos {
+src/cafeteria/datos/RepositorioProductos.java,19,
+src/cafeteria/datos/RepositorioProductos.java,20,    private final ConexionBD conexionBD;
+src/cafeteria/datos/RepositorioProductos.java,21,
+src/cafeteria/datos/RepositorioProductos.java,22,    public RepositorioProductos(ConexionBD conexionBD) {
+src/cafeteria/datos/RepositorioProductos.java,23,        this.conexionBD = conexionBD;
+src/cafeteria/datos/RepositorioProductos.java,24,    }
+src/cafeteria/datos/RepositorioProductos.java,25,
+src/cafeteria/datos/RepositorioProductos.java,26,    /** Crea la tabla y unos productos de ejemplo si todavía no existen. */
+src/cafeteria/datos/RepositorioProductos.java,27,    public void prepararTabla() throws SQLException {
+src/cafeteria/datos/RepositorioProductos.java,28,        try (Connection con = conexionBD.abrir();
+src/cafeteria/datos/RepositorioProductos.java,29,             Statement st = con.createStatement()) {
+src/cafeteria/datos/RepositorioProductos.java,30,
+src/cafeteria/datos/RepositorioProductos.java,31,"            st.executeUpdate(""CREATE TABLE IF NOT EXISTS producto ("""
+src/cafeteria/datos/RepositorioProductos.java,32,"                    + ""nombre TEXT NOT NULL, """
+src/cafeteria/datos/RepositorioProductos.java,33,"                    + ""precio REAL NOT NULL, """
+src/cafeteria/datos/RepositorioProductos.java,34,"                    + ""tipo TEXT NOT NULL, """
+src/cafeteria/datos/RepositorioProductos.java,35,"                    + ""caracteristica INTEGER NOT NULL)"");"
+src/cafeteria/datos/RepositorioProductos.java,36,
+src/cafeteria/datos/RepositorioProductos.java,37,"            try (ResultSet rs = st.executeQuery(""SELECT COUNT(*) FROM producto"")) {"
+src/cafeteria/datos/RepositorioProductos.java,38,                if (rs.next() && rs.getInt(1) == 0) {
+src/cafeteria/datos/RepositorioProductos.java,39,"                    st.executeUpdate(""INSERT INTO producto VALUES """
+src/cafeteria/datos/RepositorioProductos.java,40,"                            + ""('Café americano', 2.50, 'BEBIDA', 1), """
+src/cafeteria/datos/RepositorioProductos.java,41,"                            + ""('Limonada', 3.00, 'BEBIDA', 0), """
+src/cafeteria/datos/RepositorioProductos.java,42,"                            + ""('Sándwich de pollo', 6.50, 'COMIDA', 0), """
+src/cafeteria/datos/RepositorioProductos.java,43,"                            + ""('Empanada de verduras', 2.00, 'COMIDA', 1)"");"
+src/cafeteria/datos/RepositorioProductos.java,44,                }
+src/cafeteria/datos/RepositorioProductos.java,45,            }
+src/cafeteria/datos/RepositorioProductos.java,46,        }
+src/cafeteria/datos/RepositorioProductos.java,47,    }
+src/cafeteria/datos/RepositorioProductos.java,48,
+src/cafeteria/datos/RepositorioProductos.java,49,    /** Consulta todos los productos y los convierte en objetos Bebida o Comida. */
+src/cafeteria/datos/RepositorioProductos.java,50,    public List<Producto> listarProductos() throws SQLException {
+src/cafeteria/datos/RepositorioProductos.java,51,        List<Producto> productos = new ArrayList<>();
+src/cafeteria/datos/RepositorioProductos.java,52,        try (Connection con = conexionBD.abrir();
+src/cafeteria/datos/RepositorioProductos.java,53,             Statement st = con.createStatement();
+src/cafeteria/datos/RepositorioProductos.java,54,             ResultSet rs = st.executeQuery(
+src/cafeteria/datos/RepositorioProductos.java,55,"                     ""SELECT nombre, precio, tipo, caracteristica FROM producto"")) {"
+src/cafeteria/datos/RepositorioProductos.java,56,
+src/cafeteria/datos/RepositorioProductos.java,57,            while (rs.next()) {
+src/cafeteria/datos/RepositorioProductos.java,58,"                String nombre = rs.getString(""nombre"");"
+src/cafeteria/datos/RepositorioProductos.java,59,"                double precio = rs.getDouble(""precio"");"
+src/cafeteria/datos/RepositorioProductos.java,60,"                boolean caracteristica = rs.getInt(""caracteristica"") == 1;"
+src/cafeteria/datos/RepositorioProductos.java,61,"                if (""BEBIDA"".equals(rs.getString(""tipo""))) {"
+src/cafeteria/datos/RepositorioProductos.java,62,"                    productos.add(new Bebida(nombre, precio, caracteristica));"
+src/cafeteria/datos/RepositorioProductos.java,63,                } else {
+src/cafeteria/datos/RepositorioProductos.java,64,"                    productos.add(new Comida(nombre, precio, caracteristica));"
+src/cafeteria/datos/RepositorioProductos.java,65,                }
+src/cafeteria/datos/RepositorioProductos.java,66,            }
+src/cafeteria/datos/RepositorioProductos.java,67,        }
+src/cafeteria/datos/RepositorioProductos.java,68,        return productos;
+src/cafeteria/datos/RepositorioProductos.java,69,    }
+src/cafeteria/datos/RepositorioProductos.java,70,}
+src/cafeteria/descuento/CalculadoraDescuento.java,1,package cafeteria.descuento;
+src/cafeteria/descuento/CalculadoraDescuento.java,2,
+src/cafeteria/descuento/CalculadoraDescuento.java,3,/**
+src/cafeteria/descuento/CalculadoraDescuento.java,4, * Calcula el total a pagar usando una regla de descuento.
+src/cafeteria/descuento/CalculadoraDescuento.java,5, * No sabe cuál regla es: la recibe en el constructor.
+src/cafeteria/descuento/CalculadoraDescuento.java,6, * Así se puede cambiar la regla sin tocar esta clase.
+src/cafeteria/descuento/CalculadoraDescuento.java,7, */
+src/cafeteria/descuento/CalculadoraDescuento.java,8,public class CalculadoraDescuento {
+src/cafeteria/descuento/CalculadoraDescuento.java,9,
+src/cafeteria/descuento/CalculadoraDescuento.java,10,    private final ReglaDescuento regla;
+src/cafeteria/descuento/CalculadoraDescuento.java,11,
+src/cafeteria/descuento/CalculadoraDescuento.java,12,    public CalculadoraDescuento(ReglaDescuento regla) {
+src/cafeteria/descuento/CalculadoraDescuento.java,13,        this.regla = regla;
+src/cafeteria/descuento/CalculadoraDescuento.java,14,    }
+src/cafeteria/descuento/CalculadoraDescuento.java,15,
+src/cafeteria/descuento/CalculadoraDescuento.java,16,    public double calcularDescuento(double total) {
+src/cafeteria/descuento/CalculadoraDescuento.java,17,        if (total < 0) {
+src/cafeteria/descuento/CalculadoraDescuento.java,18,"            throw new IllegalArgumentException(""El monto no puede ser negativo"");"
+src/cafeteria/descuento/CalculadoraDescuento.java,19,        }
+src/cafeteria/descuento/CalculadoraDescuento.java,20,        return regla.calcularDescuento(total);
+src/cafeteria/descuento/CalculadoraDescuento.java,21,    }
+src/cafeteria/descuento/CalculadoraDescuento.java,22,
+src/cafeteria/descuento/CalculadoraDescuento.java,23,    public double calcularTotalFinal(double total) {
+src/cafeteria/descuento/CalculadoraDescuento.java,24,        return total - calcularDescuento(total);
+src/cafeteria/descuento/CalculadoraDescuento.java,25,    }
+src/cafeteria/descuento/CalculadoraDescuento.java,26,}
+src/cafeteria/descuento/ReglaDescuento.java,1,package cafeteria.descuento;
+src/cafeteria/descuento/ReglaDescuento.java,2,
+src/cafeteria/descuento/ReglaDescuento.java,3,/**
+src/cafeteria/descuento/ReglaDescuento.java,4, * Interfaz funcional: tiene un solo método abstracto.
+src/cafeteria/descuento/ReglaDescuento.java,5, * Por eso cada regla de descuento se puede escribir como una lambda.
+src/cafeteria/descuento/ReglaDescuento.java,6, * Recibe el total del pedido y devuelve cuánto se descuenta.
+src/cafeteria/descuento/ReglaDescuento.java,7, */
+src/cafeteria/descuento/ReglaDescuento.java,8,@FunctionalInterface
+src/cafeteria/descuento/ReglaDescuento.java,9,public interface ReglaDescuento {
+src/cafeteria/descuento/ReglaDescuento.java,10,
+src/cafeteria/descuento/ReglaDescuento.java,11,    double calcularDescuento(double total);
+src/cafeteria/descuento/ReglaDescuento.java,12,}
+src/cafeteria/descuento/ReglasCafeteria.java,1,package cafeteria.descuento;
+src/cafeteria/descuento/ReglasCafeteria.java,2,
+src/cafeteria/descuento/ReglasCafeteria.java,3,/**
+src/cafeteria/descuento/ReglasCafeteria.java,4, * Aquí están las reglas de descuento de la cafetería escritas como lambdas.
+src/cafeteria/descuento/ReglasCafeteria.java,5," * Para crear una regla nueva se agrega otra lambda aquí,"
+src/cafeteria/descuento/ReglasCafeteria.java,6, * sin cambiar la calculadora ni la ventana.
+src/cafeteria/descuento/ReglasCafeteria.java,7, */
+src/cafeteria/descuento/ReglasCafeteria.java,8,public final class ReglasCafeteria {
+src/cafeteria/descuento/ReglasCafeteria.java,9,
+src/cafeteria/descuento/ReglasCafeteria.java,10,    public static final double MONTO_MINIMO = 10.0;
+src/cafeteria/descuento/ReglasCafeteria.java,11,    public static final double PORCENTAJE = 0.15;
+src/cafeteria/descuento/ReglasCafeteria.java,12,
+src/cafeteria/descuento/ReglasCafeteria.java,13,"    /** Si el total es mayor a $10 se descuenta el 15 %. Si no, el descuento es 0. */"
+src/cafeteria/descuento/ReglasCafeteria.java,14,    public static final ReglaDescuento QUINCE_POR_CIENTO_SOBRE_10 =
+src/cafeteria/descuento/ReglasCafeteria.java,15,            total -> total > MONTO_MINIMO ? total * PORCENTAJE : 0.0;
+src/cafeteria/descuento/ReglasCafeteria.java,16,
+src/cafeteria/descuento/ReglasCafeteria.java,17,    /** Regla que no descuenta nada. Sirve para comparar. */
+src/cafeteria/descuento/ReglasCafeteria.java,18,    public static final ReglaDescuento SIN_DESCUENTO = total -> 0.0;
+src/cafeteria/descuento/ReglasCafeteria.java,19,
+src/cafeteria/descuento/ReglasCafeteria.java,20,    private ReglasCafeteria() {
+src/cafeteria/descuento/ReglasCafeteria.java,21,        // No se crean objetos de esta clase
+src/cafeteria/descuento/ReglasCafeteria.java,22,    }
+src/cafeteria/descuento/ReglasCafeteria.java,23,}
+src/cafeteria/modelo/Bebida.java,1,package cafeteria.modelo;
+src/cafeteria/modelo/Bebida.java,2,
+src/cafeteria/modelo/Bebida.java,3,/** Una bebida de la cafetería. Hereda de Producto. */
+src/cafeteria/modelo/Bebida.java,4,public class Bebida extends Producto {
+src/cafeteria/modelo/Bebida.java,5,
+src/cafeteria/modelo/Bebida.java,6,    private final boolean caliente;
+src/cafeteria/modelo/Bebida.java,7,
+src/cafeteria/modelo/Bebida.java,8,"    public Bebida(String nombre, double precio, boolean caliente) {"
+src/cafeteria/modelo/Bebida.java,9,"        super(nombre, precio);"
+src/cafeteria/modelo/Bebida.java,10,        this.caliente = caliente;
+src/cafeteria/modelo/Bebida.java,11,    }
+src/cafeteria/modelo/Bebida.java,12,
+src/cafeteria/modelo/Bebida.java,13,    public boolean isCaliente() {
+src/cafeteria/modelo/Bebida.java,14,        return caliente;
+src/cafeteria/modelo/Bebida.java,15,    }
+src/cafeteria/modelo/Bebida.java,16,
+src/cafeteria/modelo/Bebida.java,17,    @Override
+src/cafeteria/modelo/Bebida.java,18,    public String getTipo() {
+src/cafeteria/modelo/Bebida.java,19,"        return ""Bebida"";"
+src/cafeteria/modelo/Bebida.java,20,    }
+src/cafeteria/modelo/Bebida.java,21,
+src/cafeteria/modelo/Bebida.java,22,    @Override
+src/cafeteria/modelo/Bebida.java,23,    public String describir() {
+src/cafeteria/modelo/Bebida.java,24,"        String temperatura = caliente ? ""caliente"" : ""fría"";"
+src/cafeteria/modelo/Bebida.java,25,"        return super.describir() + "" - "" + temperatura;"
+src/cafeteria/modelo/Bebida.java,26,    }
+src/cafeteria/modelo/Bebida.java,27,}
+src/cafeteria/modelo/Comida.java,1,package cafeteria.modelo;
+src/cafeteria/modelo/Comida.java,2,
+src/cafeteria/modelo/Comida.java,3,/** Una comida de la cafetería. Hereda de Producto. */
+src/cafeteria/modelo/Comida.java,4,public class Comida extends Producto {
+src/cafeteria/modelo/Comida.java,5,
+src/cafeteria/modelo/Comida.java,6,    private final boolean vegetariana;
+src/cafeteria/modelo/Comida.java,7,
+src/cafeteria/modelo/Comida.java,8,"    public Comida(String nombre, double precio, boolean vegetariana) {"
+src/cafeteria/modelo/Comida.java,9,"        super(nombre, precio);"
+src/cafeteria/modelo/Comida.java,10,        this.vegetariana = vegetariana;
+src/cafeteria/modelo/Comida.java,11,    }
+src/cafeteria/modelo/Comida.java,12,
+src/cafeteria/modelo/Comida.java,13,    public boolean isVegetariana() {
+src/cafeteria/modelo/Comida.java,14,        return vegetariana;
+src/cafeteria/modelo/Comida.java,15,    }
+src/cafeteria/modelo/Comida.java,16,
+src/cafeteria/modelo/Comida.java,17,    @Override
+src/cafeteria/modelo/Comida.java,18,    public String getTipo() {
+src/cafeteria/modelo/Comida.java,19,"        return ""Comida"";"
+src/cafeteria/modelo/Comida.java,20,    }
+src/cafeteria/modelo/Comida.java,21,
+src/cafeteria/modelo/Comida.java,22,    @Override
+src/cafeteria/modelo/Comida.java,23,    public String describir() {
+src/cafeteria/modelo/Comida.java,24,"        String extra = vegetariana ? "" - vegetariana"" : """";"
+src/cafeteria/modelo/Comida.java,25,        return super.describir() + extra;
+src/cafeteria/modelo/Comida.java,26,    }
+src/cafeteria/modelo/Comida.java,27,}
+src/cafeteria/modelo/Producto.java,1,package cafeteria.modelo;
+src/cafeteria/modelo/Producto.java,2,
+src/cafeteria/modelo/Producto.java,3,/**
+src/cafeteria/modelo/Producto.java,4, * Clase base de todo lo que vende la cafetería.
+src/cafeteria/modelo/Producto.java,5," * Es abstracta porque no se vende un ""producto"" a secas,"
+src/cafeteria/modelo/Producto.java,6, * siempre es una bebida o una comida.
+src/cafeteria/modelo/Producto.java,7, */
+src/cafeteria/modelo/Producto.java,8,public abstract class Producto {
+src/cafeteria/modelo/Producto.java,9,
+src/cafeteria/modelo/Producto.java,10,    private final String nombre;
+src/cafeteria/modelo/Producto.java,11,    private final double precio;
+src/cafeteria/modelo/Producto.java,12,
+src/cafeteria/modelo/Producto.java,13,"    protected Producto(String nombre, double precio) {"
+src/cafeteria/modelo/Producto.java,14,        if (nombre == null || nombre.isBlank()) {
+src/cafeteria/modelo/Producto.java,15,"            throw new IllegalArgumentException(""El producto debe tener nombre"");"
+src/cafeteria/modelo/Producto.java,16,        }
+src/cafeteria/modelo/Producto.java,17,        if (precio < 0) {
+src/cafeteria/modelo/Producto.java,18,"            throw new IllegalArgumentException(""El precio no puede ser negativo"");"
+src/cafeteria/modelo/Producto.java,19,        }
+src/cafeteria/modelo/Producto.java,20,        this.nombre = nombre;
+src/cafeteria/modelo/Producto.java,21,        this.precio = precio;
+src/cafeteria/modelo/Producto.java,22,    }
+src/cafeteria/modelo/Producto.java,23,
+src/cafeteria/modelo/Producto.java,24,    public String getNombre() {
+src/cafeteria/modelo/Producto.java,25,        return nombre;
+src/cafeteria/modelo/Producto.java,26,    }
+src/cafeteria/modelo/Producto.java,27,
+src/cafeteria/modelo/Producto.java,28,    public double getPrecio() {
+src/cafeteria/modelo/Producto.java,29,        return precio;
+src/cafeteria/modelo/Producto.java,30,    }
+src/cafeteria/modelo/Producto.java,31,
+src/cafeteria/modelo/Producto.java,32,    /** Cada tipo de producto dice qué es. */
+src/cafeteria/modelo/Producto.java,33,    public abstract String getTipo();
+src/cafeteria/modelo/Producto.java,34,
+src/cafeteria/modelo/Producto.java,35,    /** Texto para mostrar en pantalla. Las clases hijas lo cambian. */
+src/cafeteria/modelo/Producto.java,36,    public String describir() {
+src/cafeteria/modelo/Producto.java,37,"        return String.format(""%s - %s ($%.2f)"", getTipo(), nombre, precio);"
+src/cafeteria/modelo/Producto.java,38,    }
+src/cafeteria/modelo/Producto.java,39,}
+src/cafeteria/vista/VentanaDescuento.java,1,package cafeteria.vista;
+src/cafeteria/vista/VentanaDescuento.java,2,
+src/cafeteria/vista/VentanaDescuento.java,3,import cafeteria.datos.ConexionBD;
+src/cafeteria/vista/VentanaDescuento.java,4,import cafeteria.datos.RepositorioProductos;
+src/cafeteria/vista/VentanaDescuento.java,5,import cafeteria.descuento.CalculadoraDescuento;
+src/cafeteria/vista/VentanaDescuento.java,6,import cafeteria.modelo.Producto;
+src/cafeteria/vista/VentanaDescuento.java,7,
+src/cafeteria/vista/VentanaDescuento.java,8,import javax.swing.BorderFactory;
+src/cafeteria/vista/VentanaDescuento.java,9,import javax.swing.JButton;
+src/cafeteria/vista/VentanaDescuento.java,10,import javax.swing.JFrame;
+src/cafeteria/vista/VentanaDescuento.java,11,import javax.swing.JLabel;
+src/cafeteria/vista/VentanaDescuento.java,12,import javax.swing.JPanel;
+src/cafeteria/vista/VentanaDescuento.java,13,import javax.swing.JScrollPane;
+src/cafeteria/vista/VentanaDescuento.java,14,import javax.swing.JTextArea;
+src/cafeteria/vista/VentanaDescuento.java,15,import javax.swing.JTextField;
+src/cafeteria/vista/VentanaDescuento.java,16,import java.awt.BorderLayout;
+src/cafeteria/vista/VentanaDescuento.java,17,import java.awt.FlowLayout;
+src/cafeteria/vista/VentanaDescuento.java,18,import java.awt.Font;
+src/cafeteria/vista/VentanaDescuento.java,19,import java.sql.SQLException;
+src/cafeteria/vista/VentanaDescuento.java,20,import java.util.List;
+src/cafeteria/vista/VentanaDescuento.java,21,
+src/cafeteria/vista/VentanaDescuento.java,22,/**
+src/cafeteria/vista/VentanaDescuento.java,23, * Ventana de la aplicación. Solo muestra datos y recibe lo que escribe el usuario.
+src/cafeteria/vista/VentanaDescuento.java,24, * Los cálculos los hace la CalculadoraDescuento.
+src/cafeteria/vista/VentanaDescuento.java,25, */
+src/cafeteria/vista/VentanaDescuento.java,26,public class VentanaDescuento extends JFrame {
+src/cafeteria/vista/VentanaDescuento.java,27,
+src/cafeteria/vista/VentanaDescuento.java,28,    private static final long serialVersionUID = 1L;
+src/cafeteria/vista/VentanaDescuento.java,29,
+src/cafeteria/vista/VentanaDescuento.java,30,    private final CalculadoraDescuento calculadora;
+src/cafeteria/vista/VentanaDescuento.java,31,    private final ConexionBD conexionBD;
+src/cafeteria/vista/VentanaDescuento.java,32,    private final RepositorioProductos repositorio;
+src/cafeteria/vista/VentanaDescuento.java,33,
+src/cafeteria/vista/VentanaDescuento.java,34,    private final JTextField campoMonto = new JTextField(10);
+src/cafeteria/vista/VentanaDescuento.java,35,"    private final JButton botonCalcular = new JButton(""Calcular Descuento"");"
+src/cafeteria/vista/VentanaDescuento.java,36,"    private final JTextArea areaResultado = new JTextArea(16, 58);"
+src/cafeteria/vista/VentanaDescuento.java,37,
+src/cafeteria/vista/VentanaDescuento.java,38,"    public VentanaDescuento(CalculadoraDescuento calculadora,"
+src/cafeteria/vista/VentanaDescuento.java,39,"                            ConexionBD conexionBD,"
+src/cafeteria/vista/VentanaDescuento.java,40,                            RepositorioProductos repositorio) {
+src/cafeteria/vista/VentanaDescuento.java,41,"        super(""Cafetería - Calculadora de descuentos"");"
+src/cafeteria/vista/VentanaDescuento.java,42,        this.calculadora = calculadora;
+src/cafeteria/vista/VentanaDescuento.java,43,        this.conexionBD = conexionBD;
+src/cafeteria/vista/VentanaDescuento.java,44,        this.repositorio = repositorio;
+src/cafeteria/vista/VentanaDescuento.java,45,        armarVentana();
+src/cafeteria/vista/VentanaDescuento.java,46,        probarConexion();
+src/cafeteria/vista/VentanaDescuento.java,47,    }
+src/cafeteria/vista/VentanaDescuento.java,48,
+src/cafeteria/vista/VentanaDescuento.java,49,    private void armarVentana() {
+src/cafeteria/vista/VentanaDescuento.java,50,"        JPanel panel = new JPanel(new BorderLayout(10, 10));"
+src/cafeteria/vista/VentanaDescuento.java,51,"        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));"
+src/cafeteria/vista/VentanaDescuento.java,52,
+src/cafeteria/vista/VentanaDescuento.java,53,        JPanel panelEntrada = new JPanel(new FlowLayout(FlowLayout.LEFT));
+src/cafeteria/vista/VentanaDescuento.java,54,"        panelEntrada.add(new JLabel(""Monto total del pedido ($):""));"
+src/cafeteria/vista/VentanaDescuento.java,55,        panelEntrada.add(campoMonto);
+src/cafeteria/vista/VentanaDescuento.java,56,        panelEntrada.add(botonCalcular);
+src/cafeteria/vista/VentanaDescuento.java,57,
+src/cafeteria/vista/VentanaDescuento.java,58,        areaResultado.setEditable(false);
+src/cafeteria/vista/VentanaDescuento.java,59,"        areaResultado.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));"
+src/cafeteria/vista/VentanaDescuento.java,60,        areaResultado.setLineWrap(true);
+src/cafeteria/vista/VentanaDescuento.java,61,        areaResultado.setWrapStyleWord(true);
+src/cafeteria/vista/VentanaDescuento.java,62,
+src/cafeteria/vista/VentanaDescuento.java,63,"        panel.add(panelEntrada, BorderLayout.NORTH);"
+src/cafeteria/vista/VentanaDescuento.java,64,"        panel.add(new JScrollPane(areaResultado), BorderLayout.CENTER);"
+src/cafeteria/vista/VentanaDescuento.java,65,        setContentPane(panel);
+src/cafeteria/vista/VentanaDescuento.java,66,
+src/cafeteria/vista/VentanaDescuento.java,67,"        // El evento del botón: leer el monto, aplicar la lambda y mostrar el resultado"
+src/cafeteria/vista/VentanaDescuento.java,68,        botonCalcular.addActionListener(e -> calcular());
+src/cafeteria/vista/VentanaDescuento.java,69,        // Enter en el campo de texto hace lo mismo que el botón
+src/cafeteria/vista/VentanaDescuento.java,70,        campoMonto.addActionListener(e -> calcular());
+src/cafeteria/vista/VentanaDescuento.java,71,
+src/cafeteria/vista/VentanaDescuento.java,72,        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+src/cafeteria/vista/VentanaDescuento.java,73,        pack();
+src/cafeteria/vista/VentanaDescuento.java,74,        setLocationRelativeTo(null);
+src/cafeteria/vista/VentanaDescuento.java,75,    }
+src/cafeteria/vista/VentanaDescuento.java,76,
+src/cafeteria/vista/VentanaDescuento.java,77,    /** Intenta conectarse a la base de datos al iniciar y muestra qué pasó. */
+src/cafeteria/vista/VentanaDescuento.java,78,    private void probarConexion() {
+src/cafeteria/vista/VentanaDescuento.java,79,        try {
+src/cafeteria/vista/VentanaDescuento.java,80,            conexionBD.cargarDriver();
+src/cafeteria/vista/VentanaDescuento.java,81,            repositorio.prepararTabla();
+src/cafeteria/vista/VentanaDescuento.java,82,            List<Producto> productos = repositorio.listarProductos();
+src/cafeteria/vista/VentanaDescuento.java,83,"            areaResultado.append(""Conexión a la base de datos exitosa.\n"");"
+src/cafeteria/vista/VentanaDescuento.java,84,"            areaResultado.append(""Productos de la cafetería:\n"");"
+src/cafeteria/vista/VentanaDescuento.java,85,            for (Producto p : productos) {
+src/cafeteria/vista/VentanaDescuento.java,86,"                areaResultado.append(""  "" + p.describir() + ""\n"");"
+src/cafeteria/vista/VentanaDescuento.java,87,            }
+src/cafeteria/vista/VentanaDescuento.java,88,        } catch (ClassNotFoundException ex) {
+src/cafeteria/vista/VentanaDescuento.java,89,"            areaResultado.append(""Error: no se encontró el driver de SQLite ("""
+src/cafeteria/vista/VentanaDescuento.java,90,"                    + ex.getMessage() + "").\n"");"
+src/cafeteria/vista/VentanaDescuento.java,91,"            areaResultado.append(""Revise que el .jar esté en la carpeta lib.\n"");"
+src/cafeteria/vista/VentanaDescuento.java,92,"            areaResultado.append(""La calculadora de descuentos sí funciona.\n"");"
+src/cafeteria/vista/VentanaDescuento.java,93,        } catch (SQLException ex) {
+src/cafeteria/vista/VentanaDescuento.java,94,"            areaResultado.append(""Error al conectar con la base de datos: """
+src/cafeteria/vista/VentanaDescuento.java,95,"                    + ex.getMessage() + ""\n"");"
+src/cafeteria/vista/VentanaDescuento.java,96,"            areaResultado.append(""La calculadora de descuentos sí funciona.\n"");"
+src/cafeteria/vista/VentanaDescuento.java,97,        }
+src/cafeteria/vista/VentanaDescuento.java,98,"        areaResultado.append(""--------------------------------------------\n"");"
+src/cafeteria/vista/VentanaDescuento.java,99,    }
+src/cafeteria/vista/VentanaDescuento.java,100,
+src/cafeteria/vista/VentanaDescuento.java,101,    private void calcular() {
+src/cafeteria/vista/VentanaDescuento.java,102,"        String texto = campoMonto.getText().trim().replace("","", ""."");"
+src/cafeteria/vista/VentanaDescuento.java,103,        try {
+src/cafeteria/vista/VentanaDescuento.java,104,            double total = Double.parseDouble(texto);
+src/cafeteria/vista/VentanaDescuento.java,105,            double descuento = calculadora.calcularDescuento(total);
+src/cafeteria/vista/VentanaDescuento.java,106,            double totalFinal = calculadora.calcularTotalFinal(total);
+src/cafeteria/vista/VentanaDescuento.java,107,            areaResultado.append(String.format(
+src/cafeteria/vista/VentanaDescuento.java,108,"                    ""Monto: $%.2f | Descuento: $%.2f | Total a pagar: $%.2f%n"","
+src/cafeteria/vista/VentanaDescuento.java,109,"                    total, descuento, totalFinal));"
+src/cafeteria/vista/VentanaDescuento.java,110,        } catch (NumberFormatException ex) {
+src/cafeteria/vista/VentanaDescuento.java,111,"            areaResultado.append(""Escriba un número válido, por ejemplo 12.50\n"");"
+src/cafeteria/vista/VentanaDescuento.java,112,        } catch (IllegalArgumentException ex) {
+src/cafeteria/vista/VentanaDescuento.java,113,"            areaResultado.append(ex.getMessage() + ""\n"");"
+src/cafeteria/vista/VentanaDescuento.java,114,        }
+src/cafeteria/vista/VentanaDescuento.java,115,        campoMonto.selectAll();
+src/cafeteria/vista/VentanaDescuento.java,116,        campoMonto.requestFocus();
+src/cafeteria/vista/VentanaDescuento.java,117,    }
+src/cafeteria/vista/VentanaDescuento.java,118,}
